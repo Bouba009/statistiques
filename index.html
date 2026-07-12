@@ -145,7 +145,7 @@
         </div>
 
         <!-- SECTION 2: SELLER INTERFACE -->
-        <div id="seller-section" class="hidden w-full max-w-5xl space-y-6 animate-fade-in-up">
+        <div id="seller-section" class="hidden w-full max-w-6xl space-y-6 animate-fade-in-up">
             
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <!-- Left: Form to Enter/Edit Sales (5 cols) -->
@@ -194,6 +194,18 @@
                             </div>
                         </div>
 
+                        <!-- Optional Fields -->
+                        <div class="border-t border-slate-700/50 pt-3 space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 mb-2" data-i18n="field_products_count">Nombre de produits (Optionnel)</label>
+                                <input type="number" id="input-products-count" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs" placeholder="0">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 mb-2" data-i18n="field_products_names">Noms des produits (Optionnel)</label>
+                                <input type="text" id="input-products-names" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs" placeholder="Ex: Produit A, B">
+                            </div>
+                        </div>
+
                         <button type="submit" id="btn-submit-report" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-lg shadow-indigo-600/30 flex justify-center items-center gap-2">
                             <i class="fas fa-save"></i>
                             <span data-i18n="btn_save">Enregistrer le rapport</span>
@@ -203,21 +215,31 @@
                     </form>
                 </div>
 
-                <!-- Right: Seller's entries & Mini-Stats (7 cols) -->
+                <!-- Right: Seller's entries, Mini-Stats & Exports (7 cols) -->
                 <div class="lg:col-span-7 space-y-6">
-                    <!-- Mini Stats for the logged-in seller -->
-                    <div class="grid grid-cols-3 gap-4">
-                        <div class="glass-card p-4 rounded-2xl">
-                            <p class="text-[10px] uppercase text-slate-400 tracking-wider font-semibold" data-i18n="stats_total_sales">Ventes</p>
-                            <h4 class="text-lg font-bold text-indigo-400 mt-1" id="seller-stat-sales">0.00</h4>
+                    <!-- Top section with Mini Stats & Seller Downloads -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 glass-card p-4 rounded-2xl">
+                        <div class="grid grid-cols-3 gap-2 flex-grow w-full">
+                            <div class="bg-indigo-950/40 p-3 rounded-xl border border-indigo-500/10">
+                                <p class="text-[9px] uppercase text-slate-400 font-semibold" data-i18n="stats_total_sales">Ventes</p>
+                                <h4 class="text-sm font-bold text-indigo-400 mt-1" id="seller-stat-sales">0.00</h4>
+                            </div>
+                            <div class="bg-rose-950/40 p-3 rounded-xl border border-rose-500/10">
+                                <p class="text-[9px] uppercase text-slate-400 font-semibold" data-i18n="stats_total_expenses">Dépenses</p>
+                                <h4 class="text-sm font-bold text-rose-400 mt-1" id="seller-stat-expenses">0.00</h4>
+                            </div>
+                            <div class="bg-emerald-950/40 p-3 rounded-xl border border-emerald-500/10">
+                                <p class="text-[9px] uppercase text-slate-400 font-semibold" data-i18n="stats_total_cash">Caisse</p>
+                                <h4 class="text-sm font-bold text-emerald-400 mt-1" id="seller-stat-cash">0.00</h4>
+                            </div>
                         </div>
-                        <div class="glass-card p-4 rounded-2xl">
-                            <p class="text-[10px] uppercase text-slate-400 tracking-wider font-semibold" data-i18n="stats_total_expenses">Dépenses</p>
-                            <h4 class="text-lg font-bold text-rose-400 mt-1" id="seller-stat-expenses">0.00</h4>
-                        </div>
-                        <div class="glass-card p-4 rounded-2xl">
-                            <p class="text-[10px] uppercase text-slate-400 tracking-wider font-semibold" data-i18n="stats_total_cash">Caisse</p>
-                            <h4 class="text-lg font-bold text-emerald-400 mt-1" id="seller-stat-cash">0.00</h4>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="exportToExcel()" class="flex-1 sm:flex-initial bg-emerald-600/20 border border-emerald-500/30 hover:bg-emerald-600 text-emerald-200 hover:text-white px-3 py-2 rounded-xl text-[10px] font-semibold transition flex items-center justify-center gap-1">
+                                <i class="fas fa-file-excel"></i> Excel
+                            </button>
+                            <button onclick="exportToPDF()" class="flex-1 sm:flex-initial bg-rose-600/20 border border-rose-500/30 hover:bg-rose-600 text-rose-200 hover:text-white px-3 py-2 rounded-xl text-[10px] font-semibold transition flex items-center justify-center gap-1">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </button>
                         </div>
                     </div>
 
@@ -227,9 +249,9 @@
                             <h3 class="text-base font-bold" data-i18n="seller_recent_entries">Mes Saisies Récentes</h3>
                             <span id="seller-log-count" class="bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1 rounded-full">0 entries</span>
                         </div>
-                        <div class="overflow-x-auto max-h-96">
+                        <div class="overflow-x-auto max-h-[400px]">
                             <table class="w-full text-left rtl:text-right text-xs">
-                                <thead class="bg-slate-800/60 text-slate-300 uppercase tracking-wider sticky top-0">
+                                <thead class="bg-slate-800/60 text-slate-300 uppercase tracking-wider sticky top-0 z-10">
                                     <tr>
                                         <th class="px-4 py-3" data-i18n="col_date">Date</th>
                                         <th class="px-4 py-3" data-i18n="col_sales">Ventes</th>
@@ -270,6 +292,17 @@
                 </div>
             </div>
 
+            <!-- Intelligent Manager Alerts Panel -->
+            <div id="manager-alerts-container" class="hidden glass-card p-5 rounded-3xl border border-rose-500/20 bg-rose-950/10 space-y-3">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-2">
+                    <i class="fas fa-bell animate-bounce"></i>
+                    <span data-i18n="manager_alerts_title">Alertes et Notifications du Système</span>
+                </h4>
+                <div id="manager-alerts-list" class="space-y-2 text-sm font-semibold">
+                    <!-- Dynamic Alerts Populated Here -->
+                </div>
+            </div>
+
             <!-- Filters & Comparisons (Single Date OR Multi-Days Range) -->
             <div class="glass-card p-6 rounded-3xl space-y-4">
                 <h3 class="text-lg font-bold flex items-center gap-2">
@@ -277,7 +310,7 @@
                     <span data-i18n="compare_title">Comparaison des Périodes</span>
                 </h3>
                 
-                <!-- Filter Mode Selector (Single Day vs Multi Days) -->
+                <!-- Filter Mode Selector -->
                 <div class="flex gap-4 border-b border-slate-700/50 pb-4">
                     <label class="inline-flex items-center cursor-pointer">
                         <input type="radio" name="filter-mode" value="single" checked onchange="toggleFilterInputs()" class="hidden peer">
@@ -347,7 +380,6 @@
 
             <!-- Charts Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Line Chart: Sales progression -->
                 <div class="glass-card p-5 rounded-3xl h-80 flex flex-col">
                     <h4 class="text-sm font-semibold mb-4 flex items-center gap-2">
                         <i class="fas fa-chart-line text-indigo-400"></i>
@@ -357,7 +389,6 @@
                         <canvas id="salesProgressionChart"></canvas>
                     </div>
                 </div>
-                <!-- Bar Chart: Financial Distribution -->
                 <div class="glass-card p-5 rounded-3xl h-80 flex flex-col">
                     <h4 class="text-sm font-semibold mb-4 flex items-center gap-2">
                         <i class="fas fa-chart-bar text-purple-400"></i>
@@ -409,24 +440,13 @@
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 
-        // Firebase Configuration (Provided by the user) [1, 2]
-        const firebaseConfig = {
-            apiKey: "AIzaSyAIMs2Q-4P2LLL2N6tbjBglkcmpapqIhZ8",
-            authDomain: "tirourda-magasin.firebaseapp.com",
-            projectId: "tirourda-magasin",
-            storageBucket: "tirourda-magasin.firebasestorage.app",
-            messagingSenderId: "190996365625",
-            appId: "1:190996365625:web:97b0b248d1910773f968e8",
-            measurementId: "G-X4W1XPH4XW"
-        };
-
         // Initialize Firebase [1, 2]
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
         const reportsCollection = collection(db, "daily_reports");
 
-        // UI Translations
+        // Translations Dictionary
         const translations = {
             fr: {
                 app_title: "Tirourda Magasin",
@@ -447,6 +467,8 @@
                 field_expenses: "Dépenses / Charges",
                 field_online: "Ventes en ligne",
                 field_deposit: "Dépôt bancaire",
+                field_products_count: "Nombre de produits (Optionnel)",
+                field_products_names: "Noms des produits (Optionnel)",
                 btn_save: "Enregistrer le rapport",
                 btn_update: "Mettre à jour",
                 manager_dashboard_title: "Tableau de Bord Directeur",
@@ -476,11 +498,12 @@
                 col_actions: "Actions",
                 logout: "Déconnexion",
                 err_invalid_code: "Code d'accès incorrect !",
-                success_saved: "Données enregistrées avec succès !",
+                success_saved: "Données enregistrées localement et synchronisées !",
                 success_updated: "Rapport mis à jour avec succès !",
                 error_save_failed: "Une erreur est survenue lors de l'enregistrement.",
                 seller_recent_entries: "Mes Saisies Récentes",
-                action_edit: "Modifier"
+                action_edit: "Modifier",
+                manager_alerts_title: "Alertes et Notifications du Système"
             },
             ar: {
                 app_title: "متجر تيروردا",
@@ -501,6 +524,8 @@
                 field_expenses: "النفقات",
                 field_online: "المبيعات أونلاين",
                 field_deposit: "إيداع في البنك",
+                field_products_count: "عدد المنتجات المباعة (اختياري)",
+                field_products_names: "أسماء المنتجات (اختياري)",
                 btn_save: "حفظ التقرير اليومي",
                 btn_update: "تحديث التقرير",
                 manager_dashboard_title: "لوحة تحكم المدير",
@@ -530,11 +555,12 @@
                 col_actions: "العمليات",
                 logout: "تسجيل الخروج",
                 err_invalid_code: "رمز المرور غير صحيح!",
-                success_saved: "تم حفظ التقرير بنجاح!",
+                success_saved: "تم حفظ وتحديث البيانات بنجاح!",
                 success_updated: "تم تحديث التقرير بنجاح!",
                 error_save_failed: "حدث خطأ غير متوقع أثناء عملية الحفظ.",
                 seller_recent_entries: "مدخلاتي الأخيرة",
-                action_edit: "تعديل"
+                action_edit: "تعديل",
+                manager_alerts_title: "لوحة تنبيهات النظام الذكية"
             }
         };
 
@@ -599,7 +625,6 @@
                 populateSellerTable();
             }
 
-            // Sync form title if editing
             if (isEditMode) {
                 document.getElementById('seller-form-title').textContent = translations[currentLang].seller_form_title_edit;
             }
@@ -641,7 +666,7 @@
             if (role === 'seller') {
                 document.getElementById('seller-section').classList.remove('hidden');
                 cancelEditMode();
-                await fetchReportsData(); // Seller needs to read recent submissions too [1, 2]
+                await fetchReportsData(); 
                 populateSellerTable();
             } else if (role === 'manager') {
                 document.getElementById('manager-section').classList.remove('hidden');
@@ -692,7 +717,7 @@
             }
         };
 
-        // Data Storage Handler (Firestore with LocalStorage Fallback)
+        // Dual-Write Data Storage Handler (LocalStorage + Firestore fallback) [1, 2]
         window.handleFormSubmit = async function(event) {
             event.preventDefault();
 
@@ -701,61 +726,68 @@
             const expenses = parseFloat(document.getElementById('input-expenses').value) || 0;
             const online = parseFloat(document.getElementById('input-online').value) || 0;
             const deposit = parseFloat(document.getElementById('input-deposit').value) || 0;
+            
+            // Optional Fields
+            const pCount = parseInt(document.getElementById('input-products-count').value) || 0;
+            const pNames = document.getElementById('input-products-names').value.trim();
 
             if (isEditMode) {
-                // UPDATE RECORD FLOW [1, 2]
                 const updatedReport = {
                     totalSales: sales,
                     cashInRegister: cash,
                     expenses: expenses,
                     onlineSales: online,
                     bankDeposit: deposit,
+                    productsCount: pCount,
+                    productsNames: pNames,
                     timestamp: editingReportTimestamp,
                     dateString: new Date(editingReportTimestamp).toISOString().split('T')[0],
                     timeString: new Date(editingReportTimestamp).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
                 };
 
+                // 1. Immediately update Local Database (Dual-Write) [1, 2]
+                updateLocalFallback(updatedReport);
+
+                // 2. Async Sync with cloud Firestore [1, 2]
                 try {
-                    // Update in Firestore [1, 2]
                     if (editingReportId) {
                         const reportDocRef = doc(db, "daily_reports", editingReportId);
                         await updateDoc(reportDocRef, updatedReport);
                     }
-                    updateLocalFallback(updatedReport);
-                    showToast('success_updated', true);
                 } catch (error) {
-                    console.error("Firestore update failed, falling back to LocalStorage.", error);
-                    updateLocalFallback(updatedReport);
-                    showToast('success_updated', true);
+                    console.warn("Firestore update failed, relying on local state.", error);
                 }
 
+                showToast('success_updated', true);
                 cancelEditMode();
                 await fetchReportsData();
                 populateSellerTable();
 
             } else {
-                // INSERT NEW RECORD FLOW [1, 2]
                 const newReport = {
                     totalSales: sales,
                     cashInRegister: cash,
                     expenses: expenses,
                     onlineSales: online,
                     bankDeposit: deposit,
+                    productsCount: pCount,
+                    productsNames: pNames,
                     timestamp: Date.now(),
                     dateString: new Date().toISOString().split('T')[0],
                     timeString: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
                 };
 
+                // 1. Instantly write to Local Database (Dual-Write) [1, 2]
+                saveToLocalFallback(newReport);
+
+                // 2. Async Sync to Firestore [1, 2]
                 try {
                     await addDoc(reportsCollection, newReport);
-                    saveToLocalFallback(newReport);
-                    showToast('success_saved', true);
                 } catch (firebaseError) {
-                    console.error("Firebase Storage failure, switching to LocalStorage", firebaseError);
-                    saveToLocalFallback(newReport);
-                    showToast('success_saved', true);
+                    console.warn("Firebase Storage failure, saved locally.", firebaseError);
                 }
 
+                showToast('success_saved', true);
                 document.getElementById('sales-form').reset();
                 document.getElementById('zero-sales-alert').classList.add('hidden');
                 await fetchReportsData();
@@ -775,32 +807,38 @@
             if (index !== -1) {
                 localData[index] = updatedReport;
             } else {
-                localData.push(updatedReport); // Add if not found
+                localData.push(updatedReport);
             }
             localStorage.setItem('tirourda_reports', JSON.stringify(localData));
         }
 
-        // Retrieve reports (Firestore merged with Local Storage) [1, 2]
+        // Retrieve reports (Smart Merge Local Storage and Cloud Firestore) [1, 2]
         async function fetchReportsData() {
             allReports = [];
             
+            // First load local storage to ensure instant offline visual update [1]
+            const localData = JSON.parse(localStorage.getItem('tirourda_reports') || '[]');
+            allReports = [...localData];
+
             try {
                 const q = query(reportsCollection, orderBy('timestamp', 'desc'));
                 const querySnapshot = await getDocs(q);
+                
                 querySnapshot.forEach((doc) => {
-                    allReports.push({ docId: doc.id, ...doc.data() });
+                    const fbData = doc.data();
+                    fbData.docId = doc.id;
+                    
+                    // Deduplicate and merge Firestore data over local fallback [1]
+                    const existingIndex = allReports.findIndex(item => item.timestamp === fbData.timestamp);
+                    if (existingIndex !== -1) {
+                        allReports[existingIndex] = { ...allReports[existingIndex], ...fbData };
+                    } else {
+                        allReports.push(fbData);
+                    }
                 });
             } catch (firestoreError) {
-                console.warn("Firestore collection fetch failure, loading local database.", firestoreError);
+                console.warn("Firestore collection fetch failure, displaying local dataset only.", firestoreError);
             }
-
-            // Sync with local fallback database
-            const localData = JSON.parse(localStorage.getItem('tirourda_reports') || '[]');
-            localData.forEach(localItem => {
-                if (!allReports.some(fbItem => fbItem.timestamp === localItem.timestamp)) {
-                    allReports.push(localItem);
-                }
-            });
 
             // Standard order by timestamp descending
             allReports.sort((a, b) => b.timestamp - a.timestamp);
@@ -808,10 +846,12 @@
 
             if (currentUserRole === 'manager') {
                 updateDashboardVisuals();
+            } else if (currentUserRole === 'seller') {
+                populateSellerTable();
             }
         }
 
-        // Populate Table for Sellers with Editing Capabilities [1, 2]
+        // Populate Table for Sellers [1, 2]
         function populateSellerTable() {
             const tbody = document.getElementById('seller-reports-table-body');
             tbody.innerHTML = '';
@@ -829,10 +869,20 @@
                 tr.className = "hover:bg-slate-800/30 transition duration-150";
                 
                 const formattedDate = `${item.dateString} ${item.timeString || ''}`;
+                
+                // Render products information nicely if they exist
+                const prodDetails = (item.productsCount && item.productsCount > 0)
+                    ? `<div class="text-[10px] text-slate-400 mt-1">📦 ${item.productsCount} pcs: ${item.productsNames || ''}</div>`
+                    : '';
 
                 tr.innerHTML = `
-                    <td class="px-4 py-3 font-semibold text-slate-200">${formattedDate}</td>
-                    <td class="px-4 py-3 text-indigo-400 font-semibold">${item.totalSales.toFixed(2)}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-200">
+                        ${formattedDate}
+                    </td>
+                    <td class="px-4 py-3 text-indigo-400 font-semibold">
+                        ${item.totalSales.toFixed(2)}
+                        ${prodDetails}
+                    </td>
                     <td class="px-4 py-3 text-rose-400">${item.expenses.toFixed(2)}</td>
                     <td class="px-4 py-3">
                         <button onclick="startEditMode('${item.docId || ''}', ${item.timestamp})" class="bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white px-3 py-1 rounded-lg text-[11px] transition flex items-center gap-1">
@@ -875,6 +925,8 @@
             document.getElementById('input-expenses').value = reportToEdit.expenses;
             document.getElementById('input-online').value = reportToEdit.onlineSales;
             document.getElementById('input-deposit').value = reportToEdit.bankDeposit || 0;
+            document.getElementById('input-products-count').value = reportToEdit.productsCount || 0;
+            document.getElementById('input-products-names').value = reportToEdit.productsNames || '';
 
             checkZeroSales(reportToEdit.totalSales);
             document.getElementById('seller-section').scrollIntoView({ behavior: 'smooth' });
@@ -897,12 +949,94 @@
             document.getElementById('zero-sales-alert').classList.add('hidden');
         };
 
-        // Update Manager View Elements (Charts and Tables)
+        // Manager Intelligent Alerts System
+        function runManagerAlertEngine() {
+            const container = document.getElementById('manager-alerts-container');
+            const alertList = document.getElementById('manager-alerts-list');
+            alertList.innerHTML = '';
+
+            let alerts = [];
+
+            // 1. Calculate Consecutive No Sales (0 sales)
+            // Group total sales by date
+            const dailySums = {};
+            allReports.forEach(item => {
+                if (!dailySums[item.dateString]) dailySums[item.dateString] = 0;
+                dailySums[item.dateString] += item.totalSales;
+            });
+
+            // Sort dates descending
+            const sortedDates = Object.keys(dailySums).sort((a,b) => b.localeCompare(a));
+            
+            let consecutiveZeros = 0;
+            for (let i = 0; i < sortedDates.length; i++) {
+                if (dailySums[sortedDates[i]] === 0) {
+                    consecutiveZeros++;
+                } else {
+                    break;
+                }
+            }
+
+            if (consecutiveZeros > 0) {
+                let emoji = '😶';
+                if (consecutiveZeros >= 3) emoji = '😯';
+                if (consecutiveZeros >= 5) emoji = '🚨';
+
+                const textFr = `Alerte: ${consecutiveZeros} jour(s) consécutif(s) sans vente ${emoji}`;
+                const textAr = `تنبيه: ${consecutiveZeros === 1 ? "لا يوجد مبيعات اليوم" : consecutiveZeros === 2 ? "يومين بلا بيع 😶" : `${consecutiveZeros} أيام بلا بيع ${emoji}`}`;
+                alerts.push({ type: 'danger', text: currentLang === 'ar' ? textAr : textFr });
+            }
+
+            // 2. High Expenses Alert (Expenses > 50% of Sales in any entry)
+            const highExpensesEntry = filteredReports.find(item => item.totalSales > 0 && (item.expenses > (item.totalSales * 0.5)));
+            if (highExpensesEntry) {
+                const textFr = `Attention: Charges élevées détectées le ${highExpensesEntry.dateString} (>50% des ventes)`;
+                const textAr = `تحذير: نفقات مرتفعة جداً مقارنة بالمبيعات تم تسجيلها في تاريخ ${highExpensesEntry.dateString}`;
+                alerts.push({ type: 'warning', text: currentLang === 'ar' ? textAr : textFr });
+            }
+
+            // 3. Online Dominance Success Alert (Online sales exceeding cash sales)
+            const onlineBoomEntry = filteredReports.find(item => item.onlineSales > item.cashInRegister && item.onlineSales > 0);
+            if (onlineBoomEntry) {
+                const textFr = `Succès: Les ventes en ligne ont dépassé le cash physique le ${onlineBoomEntry.dateString} !`;
+                const textAr = `تميز: المبيعات أونلاين تجاوزت الكاش في الصندوق في تاريخ ${onlineBoomEntry.dateString} !`;
+                alerts.push({ type: 'success', text: currentLang === 'ar' ? textAr : textFr });
+            }
+
+            // 4. Large Deposit Alert
+            const largeDeposit = filteredReports.find(item => item.bankDeposit >= 5000);
+            if (largeDeposit) {
+                const textFr = `Info: Dépôt bancaire important enregistré (${largeDeposit.bankDeposit} DA) le ${largeDeposit.dateString}`;
+                const textAr = `إعلام: تم إيداع بنكي بمبلغ كبير بقيمة (${largeDeposit.bankDeposit} دج) بتاريخ ${largeDeposit.dateString}`;
+                alerts.push({ type: 'info', text: currentLang === 'ar' ? textAr : textFr });
+            }
+
+            // Display alerts if any
+            if (alerts.length > 0) {
+                container.classList.remove('hidden');
+                alerts.forEach(alert => {
+                    const alertDiv = document.createElement('div');
+                    let bgClass = "bg-rose-500/10 border-rose-500/30 text-rose-300";
+                    if (alert.type === 'warning') bgClass = "bg-amber-500/10 border-amber-500/30 text-amber-300";
+                    if (alert.type === 'success') bgClass = "bg-emerald-500/10 border-emerald-500/30 text-emerald-300";
+                    if (alert.type === 'info') bgClass = "bg-sky-500/10 border-sky-500/30 text-sky-300";
+
+                    alertDiv.className = `px-4 py-2.5 rounded-xl border ${bgClass} flex items-center gap-2 animate-fade-in-up`;
+                    alertDiv.innerHTML = `<i class="fas fa-info-circle"></i> <span>${alert.text}</span>`;
+                    alertList.appendChild(alertDiv);
+                });
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        // Update Manager View Elements (Charts, Tables, Alerts)
         function updateDashboardVisuals() {
             populateTable();
             calculateStats();
             renderProgressionChart();
             renderDistributionChart();
+            runManagerAlertEngine();
         }
 
         function populateTable() {
@@ -917,9 +1051,17 @@
                 
                 const formattedDate = `${item.dateString} ${item.timeString || ''}`;
 
+                // Display products sold under total sales
+                const prodDetails = (item.productsCount && item.productsCount > 0)
+                    ? `<div class="text-[10px] text-slate-400 mt-1">📦 ${item.productsCount} pcs: ${item.productsNames || ''}</div>`
+                    : '';
+
                 tr.innerHTML = `
                     <td class="px-6 py-4 font-semibold text-slate-200">${formattedDate}</td>
-                    <td class="px-6 py-4 text-indigo-400 font-semibold">${item.totalSales.toFixed(2)}</td>
+                    <td class="px-6 py-4 text-indigo-400 font-semibold">
+                        ${item.totalSales.toFixed(2)}
+                        ${prodDetails}
+                    </td>
                     <td class="px-6 py-4 text-emerald-400">${item.cashInRegister.toFixed(2)}</td>
                     <td class="px-6 py-4 text-rose-400">${item.expenses.toFixed(2)}</td>
                     <td class="px-6 py-4 text-purple-400">${item.onlineSales.toFixed(2)}</td>
@@ -1070,13 +1212,17 @@
 
         // Document Exporting Logic
         window.exportToExcel = function() {
-            const dataToExport = filteredReports.map(item => ({
+            const currentData = currentUserRole === 'seller' ? allReports : filteredReports;
+
+            const dataToExport = currentData.map(item => ({
                 "Date & Heure": `${item.dateString} ${item.timeString || ''}`,
                 "Ventes Totales": item.totalSales,
                 "Espèces en Caisse": item.cashInRegister,
                 "Dépenses / Charges": item.expenses,
                 "Ventes En Ligne": item.onlineSales,
-                "Dépôts Bancaire": item.bankDeposit || 0
+                "Dépôts Bancaire": item.bankDeposit || 0,
+                "Nombre Produits": item.productsCount || 0,
+                "Noms Produits": item.productsNames || ""
             }));
 
             const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -1086,6 +1232,7 @@
         };
 
         window.exportToPDF = function() {
+            const currentData = currentUserRole === 'seller' ? allReports : filteredReports;
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
@@ -1094,17 +1241,17 @@
             doc.setFontSize(11);
             doc.text(`Rapport genere le: ${new Date().toLocaleString()}`, 14, 28);
 
-            const tableColumn = ["Date", "Ventes", "Caisse", "Depenses", "En Ligne", "Depot"];
+            const tableColumn = ["Date", "Ventes", "Caisse", "Depenses", "En Ligne", "Prod. Qty"];
             const tableRows = [];
 
-            filteredReports.forEach(item => {
+            currentData.forEach(item => {
                 const reportData = [
                     `${item.dateString} ${item.timeString || ''}`,
                     item.totalSales.toFixed(2),
                     item.cashInRegister.toFixed(2),
                     item.expenses.toFixed(2),
                     item.onlineSales.toFixed(2),
-                    (item.bankDeposit || 0).toFixed(2)
+                    item.productsCount || 0
                 ];
                 tableRows.push(reportData);
             });
@@ -1120,12 +1267,28 @@
             doc.save(`Tirourda_Rapports_${new Date().toISOString().split('T')[0]}.pdf`);
         };
 
-        // Listen for Keyboard Enter Key on Access Code Input
+        // Keyboard navigation bind
         document.getElementById('access-code').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 attemptLogin();
             }
         });
+
+        // Globally exposing modular functions [1, 2]
+        window.toggleLanguage = toggleLanguage;
+        window.selectRole = selectRole;
+        window.cancelLogin = cancelLogin;
+        window.attemptLogin = attemptLogin;
+        window.logout = logout;
+        window.checkZeroSales = checkZeroSales;
+        window.toggleFilterInputs = toggleFilterInputs;
+        window.handleFormSubmit = handleFormSubmit;
+        window.startEditMode = startEditMode;
+        window.cancelEditMode = cancelEditMode;
+        window.applyFilters = applyFilters;
+        window.resetFilters = resetFilters;
+        window.exportToExcel = exportToExcel;
+        window.exportToPDF = exportToPDF;
     </script>
 </body>
 </html>
