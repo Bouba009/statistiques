@@ -342,7 +342,7 @@
                     </div>
 
                     <div class="flex gap-2">
-                        <button onclick="applyFilters()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm transition" data-i18n="btn_filter">Filtrer</button>
+                        <button onclick="applyFilters()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm transition" data-i18n="btn_filter">Filتر</button>
                         <button onclick="resetFilters()" class="px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-sm transition"><i class="fas fa-sync-alt"></i></button>
                     </div>
                 </div>
@@ -455,9 +455,16 @@
             measurementId: "G-X4W1XPH4XW"
         };
 
-        // Initialize Firebase [1, 2]
+        // Initialize Firebase safely to prevent crashes in restricted file:// contexts
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
+        
+        let analytics;
+        try {
+            analytics = getAnalytics(app);
+        } catch (analyticsError) {
+            console.warn("Firebase Analytics bypassed (local execution protocol detected).", analyticsError);
+        }
+
         const db = getFirestore(app);
         const reportsCollection = collection(db, "daily_reports");
 
@@ -516,7 +523,7 @@
                 success_saved: "Rapport enregistré sur Firebase !",
                 success_updated: "Rapport mis à jour sur Firebase !",
                 error_save_failed: "Échec de l'enregistrement sur Firebase !",
-                error_fetch_failed: "Erreur lors du chargement depuis Firebase.",
+                error_fetch_failed: "Erreur lors du chargement desde Firebase.",
                 seller_recent_entries: "Mes Saisies Récentes",
                 action_edit: "Modifier",
                 manager_alerts_title: "Alertes et Notifications du Système",
@@ -599,13 +606,18 @@
         let salesChart = null;
         let distributionChart = null;
 
-        // Custom Notification / Toast Loader
-        function showToast(textKey, isSuccess = true) {
+        // Custom Notification / Toast Loader [1]
+        function showToast(textKey, isSuccess = true, customDetail = '') {
             const toast = document.getElementById('toast');
             const icon = document.getElementById('toast-icon');
             const label = document.getElementById('toast-text');
 
-            label.textContent = translations[currentLang][textKey] || textKey;
+            let message = translations[currentLang][textKey] || textKey;
+            if (customDetail) {
+                // If a detailed database error exists, append it dynamically to allow diagnosis [1]
+                message += ` (${customDetail})`;
+            }
+            label.textContent = message;
             
             if (isSuccess) {
                 toast.className = "fixed top-5 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-950/80 border border-emerald-500/40 px-6 py-3 rounded-xl shadow-2xl flex items-center space-x-3 text-emerald-200 duration-300 scale-100 opacity-100";
@@ -617,7 +629,7 @@
 
             setTimeout(() => {
                 toast.className = "fixed top-5 left-1/2 transform -translate-x-1/2 z-50 glass-card px-6 py-3 rounded-xl shadow-2xl flex items-center space-x-3 transition-all duration-300 opacity-0 pointer-events-none scale-95";
-            }, 3000);
+            }, 6000); // Expanded duration to make diagnosing error text easy
         }
 
         // Language toggle
@@ -735,7 +747,7 @@
             }
         }
 
-        // Direct Firebase-Only Storage Handler [1]
+        // Direct Firebase-Only Storage Handler with Diagnostics [1]
         async function handleFormSubmit(event) {
             event.preventDefault();
 
@@ -743,7 +755,7 @@
             const btnSubmit = document.getElementById('btn-submit-report');
             const originalBtnText = btnSubmit.querySelector('span').textContent;
             btnSubmit.disabled = true;
-            btnSubmit.querySelector('span').textContent = currentLang === 'ar' ? 'جاري الحفظ سحابياً...' : 'Enregistrement saphir...';
+            btnSubmit.querySelector('span').textContent = currentLang === 'ar' ? 'جاري الحفظ سحابياً...' : 'Enregistrement...';
 
             const sales = parseFloat(document.getElementById('input-total-sales').value) || 0;
             const cash = parseFloat(document.getElementById('input-cash').value) || 0;
@@ -774,6 +786,8 @@
                         const reportDocRef = doc(db, "daily_reports", editingReportId);
                         await updateDoc(reportDocRef, updatedReport);
                         showToast('success_updated', true);
+                    } else {
+                        throw new Error("Missing Document ID");
                     }
                     cancelEditMode();
 
@@ -802,8 +816,9 @@
                 await fetchReportsData();
 
             } catch (firebaseError) {
-                console.error("Firebase Storage failure", firebaseError);
-                showToast('error_save_failed', false);
+                console.error("Firebase Storage failure details:", firebaseError);
+                // Append detailed database message [1]
+                showToast('error_save_failed', false, firebaseError.message || firebaseError.code || '');
             } finally {
                 // Restore button state
                 btnSubmit.disabled = false;
@@ -834,7 +849,7 @@
                 });
             } catch (firestoreError) {
                 console.error("Firestore loading failure", firestoreError);
-                showToast("error_fetch_failed", false);
+                showToast("error_fetch_failed", false, firestoreError.message || firestoreError.code || '');
             }
 
             // Order by timestamp descending
@@ -1280,14 +1295,7 @@
             doc.save(`Tirourda_Rapports_${new Date().toISOString().split('T')[0]}.pdf`);
         }
 
-        // Keyboard navigation bind
-        document.getElementById('access-code').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                attemptLogin();
-            }
-        });
-
-        // Globally exposing modular functions [1, 2]
+        // Explicit Global Bindings (This block maps local modular functions to standard window scope variables) [1, 2]
         window.toggleLanguage = toggleLanguage;
         window.selectRole = selectRole;
         window.cancelLogin = cancelLogin;
