@@ -440,6 +440,17 @@
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 
+        // Your web app's Firebase configuration (Corrected & Integrated) [1, 2]
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIMs2Q-4P2LLL2N6tbjBglkcmpapqIhZ8",
+            authDomain: "tirourda-magasin.firebaseapp.com",
+            projectId: "tirourda-magasin",
+            storageBucket: "tirourda-magasin.firebasestorage.app",
+            messagingSenderId: "190996365625",
+            appId: "1:190996365625:web:97b0b248d1910773f968e8",
+            measurementId: "G-X4W1XPH4XW"
+        };
+
         // Initialize Firebase [1, 2]
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
