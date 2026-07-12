@@ -440,7 +440,7 @@
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 
-        // Your web app's Firebase configuration [1, 2]
+        // Firebase Configuration [1, 2]
         const firebaseConfig = {
             apiKey: "AIzaSyAIMs2Q-4P2LLL2N6tbjBglkcmpapqIhZ8",
             authDomain: "tirourda-magasin.firebaseapp.com",
@@ -840,7 +840,7 @@
             localStorage.setItem('tirourda_reports', JSON.stringify(localData));
         }
 
-        // Retrieve reports
+        // Retrieve reports (Synchronized)
         async function fetchReportsData() {
             allReports = [];
             
@@ -878,7 +878,7 @@
             }
         }
 
-        // Populate Table for Sellers [1, 2]
+        // Populate Table for Sellers with Safety Sanitization [1]
         function populateSellerTable() {
             const tbody = document.getElementById('seller-reports-table-body');
             tbody.innerHTML = '';
@@ -888,9 +888,13 @@
             let sellerSales = 0, sellerExpenses = 0, sellerCash = 0;
 
             allReports.forEach(item => {
-                sellerSales += item.totalSales;
-                sellerExpenses += item.expenses;
-                sellerCash += item.cashInRegister;
+                const itemSales = Number(item.totalSales) || 0;
+                const itemExpenses = Number(item.expenses) || 0;
+                const itemCash = Number(item.cashInRegister) || 0;
+
+                sellerSales += itemSales;
+                sellerExpenses += itemExpenses;
+                sellerCash += itemCash;
 
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-800/30 transition duration-150";
@@ -906,10 +910,10 @@
                         ${formattedDate}
                     </td>
                     <td class="px-4 py-3 text-indigo-400 font-semibold">
-                        ${item.totalSales.toFixed(2)}
+                        ${itemSales.toFixed(2)}
                         ${prodDetails}
                     </td>
-                    <td class="px-4 py-3 text-rose-400">${item.expenses.toFixed(2)}</td>
+                    <td class="px-4 py-3 text-rose-400">${itemExpenses.toFixed(2)}</td>
                     <td class="px-4 py-3">
                         <button onclick="startEditMode('${item.docId || ''}', ${item.timestamp})" class="bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white px-3 py-1 rounded-lg text-[11px] transition flex items-center gap-1">
                             <i class="fas fa-edit"></i>
@@ -975,7 +979,7 @@
             document.getElementById('zero-sales-alert').classList.add('hidden');
         }
 
-        // Manager Intelligent Alerts System
+        // Manager Intelligent Alerts System [1]
         function runManagerAlertEngine() {
             const container = document.getElementById('manager-alerts-container');
             const alertList = document.getElementById('manager-alerts-list');
@@ -983,11 +987,12 @@
 
             let alerts = [];
 
-            // 1. Calculate Consecutive No Sales (0 sales)
+            // 1. Calculate Consecutive No Sales (0 sales) [1]
             const dailySums = {};
             allReports.forEach(item => {
-                if (!dailySums[item.dateString]) dailySums[item.dateString] = 0;
-                dailySums[item.dateString] += item.totalSales;
+                const dateStr = item.dateString || 'unknown';
+                if (!dailySums[dateStr]) dailySums[dateStr] = 0;
+                dailySums[dateStr] += Number(item.totalSales) || 0;
             });
 
             const sortedDates = Object.keys(dailySums).sort((a,b) => b.localeCompare(a));
@@ -1012,7 +1017,11 @@
             }
 
             // 2. High Expenses Alert
-            const highExpensesEntry = filteredReports.find(item => item.totalSales > 0 && (item.expenses > (item.totalSales * 0.5)));
+            const highExpensesEntry = filteredReports.find(item => {
+                const s = Number(item.totalSales) || 0;
+                const e = Number(item.expenses) || 0;
+                return s > 0 && (e > (s * 0.5));
+            });
             if (highExpensesEntry) {
                 const textFr = `Attention: Charges élevées détectées le ${highExpensesEntry.dateString} (>50% des ventes)`;
                 const textAr = `تحذير: نفقات مرتفعة جداً مقارنة بالمبيعات تم تسجيلها في تاريخ ${highExpensesEntry.dateString}`;
@@ -1020,7 +1029,11 @@
             }
 
             // 3. Online Dominance Success Alert
-            const onlineBoomEntry = filteredReports.find(item => item.onlineSales > item.cashInRegister && item.onlineSales > 0);
+            const onlineBoomEntry = filteredReports.find(item => {
+                const o = Number(item.onlineSales) || 0;
+                const c = Number(item.cashInRegister) || 0;
+                return o > c && o > 0;
+            });
             if (onlineBoomEntry) {
                 const textFr = `Succès: Les ventes en ligne ont dépassé le cash physique le ${onlineBoomEntry.dateString} !`;
                 const textAr = `تميز: المبيعات أونلاين تجاوزت الكاش في الصندوق في تاريخ ${onlineBoomEntry.dateString} !`;
@@ -1028,7 +1041,7 @@
             }
 
             // 4. Large Deposit Alert
-            const largeDeposit = filteredReports.find(item => item.bankDeposit >= 5000);
+            const largeDeposit = filteredReports.find(item => (Number(item.bankDeposit) || 0) >= 5000);
             if (largeDeposit) {
                 const textFr = `Info: Dépôt bancaire important enregistré (${largeDeposit.bankDeposit} DA) le ${largeDeposit.dateString}`;
                 const textAr = `إعلام: تم إيداع بنكي بمبلغ كبير بقيمة (${largeDeposit.bankDeposit} دج) بتاريخ ${largeDeposit.dateString}`;
@@ -1062,6 +1075,7 @@
             runManagerAlertEngine();
         }
 
+        // Populate Table with Safety Sanitization [1]
         function populateTable() {
             const tbody = document.getElementById('reports-table-body');
             tbody.innerHTML = '';
@@ -1074,6 +1088,12 @@
                 
                 const formattedDate = `${item.dateString} ${item.timeString || ''}`;
 
+                const itemSales = Number(item.totalSales) || 0;
+                const itemCash = Number(item.cashInRegister) || 0;
+                const itemExpenses = Number(item.expenses) || 0;
+                const itemOnline = Number(item.onlineSales) || 0;
+                const itemDeposit = Number(item.bankDeposit) || 0;
+
                 const prodDetails = (item.productsCount && item.productsCount > 0)
                     ? `<div class="text-[10px] text-slate-400 mt-1">📦 ${item.productsCount} pcs: ${item.productsNames || ''}</div>`
                     : '';
@@ -1081,26 +1101,27 @@
                 tr.innerHTML = `
                     <td class="px-6 py-4 font-semibold text-slate-200">${formattedDate}</td>
                     <td class="px-6 py-4 text-indigo-400 font-semibold">
-                        ${item.totalSales.toFixed(2)}
+                        ${itemSales.toFixed(2)}
                         ${prodDetails}
                     </td>
-                    <td class="px-6 py-4 text-emerald-400">${item.cashInRegister.toFixed(2)}</td>
-                    <td class="px-6 py-4 text-rose-400">${item.expenses.toFixed(2)}</td>
-                    <td class="px-6 py-4 text-purple-400">${item.onlineSales.toFixed(2)}</td>
-                    <td class="px-6 py-4 text-slate-300">${item.bankDeposit ? item.bankDeposit.toFixed(2) : '0.00'}</td>
+                    <td class="px-6 py-4 text-emerald-400">${itemCash.toFixed(2)}</td>
+                    <td class="px-6 py-4 text-rose-400">${itemExpenses.toFixed(2)}</td>
+                    <td class="px-6 py-4 text-purple-400">${itemOnline.toFixed(2)}</td>
+                    <td class="px-6 py-4 text-slate-300">${itemDeposit.toFixed(2)}</td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
+        // Calculate stats with safe number mapping [1]
         function calculateStats() {
             let totalSales = 0, totalExpenses = 0, totalCash = 0, totalOnline = 0;
 
             filteredReports.forEach(item => {
-                totalSales += item.totalSales;
-                totalExpenses += item.expenses;
-                totalCash += item.cashInRegister;
-                totalOnline += item.onlineSales;
+                totalSales += Number(item.totalSales) || 0;
+                totalExpenses += Number(item.expenses) || 0;
+                totalCash += Number(item.cashInRegister) || 0;
+                totalOnline += Number(item.onlineSales) || 0;
             });
 
             document.getElementById('stat-total-sales').textContent = totalSales.toFixed(2);
@@ -1149,8 +1170,8 @@
 
             const graphData = [...filteredReports].reverse();
             const labels = graphData.map(item => item.dateString);
-            const salesData = graphData.map(item => item.totalSales);
-            const expensesData = graphData.map(item => item.expenses);
+            const salesData = graphData.map(item => Number(item.totalSales) || 0);
+            const expensesData = graphData.map(item => Number(item.expenses) || 0);
 
             salesChart = new Chart(ctx, {
                 type: 'line',
@@ -1195,10 +1216,10 @@
 
             let sales = 0, expenses = 0, cash = 0, online = 0;
             filteredReports.forEach(item => {
-                sales += item.totalSales;
-                expenses += item.expenses;
-                cash += item.cashInRegister;
-                online += item.onlineSales;
+                sales += Number(item.totalSales) || 0;
+                expenses += Number(item.expenses) || 0;
+                cash += Number(item.cashInRegister) || 0;
+                online += Number(item.onlineSales) || 0;
             });
 
             distributionChart = new Chart(ctx, {
@@ -1238,11 +1259,11 @@
 
             const dataToExport = currentData.map(item => ({
                 "Date & Heure": `${item.dateString} ${item.timeString || ''}`,
-                "Ventes Totales": item.totalSales,
-                "Espèces en Caisse": item.cashInRegister,
-                "Dépenses / Charges": item.expenses,
-                "Ventes En Ligne": item.onlineSales,
-                "Dépôts Bancaire": item.bankDeposit || 0,
+                "Ventes Totales": Number(item.totalSales) || 0,
+                "Espèces en Caisse": Number(item.cashInRegister) || 0,
+                "Dépenses / Charges": Number(item.expenses) || 0,
+                "Ventes En Ligne": Number(item.onlineSales) || 0,
+                "Dépôts Bancaire": Number(item.bankDeposit) || 0,
                 "Nombre Produits": item.productsCount || 0,
                 "Noms Produits": item.productsNames || ""
             }));
@@ -1269,10 +1290,10 @@
             currentData.forEach(item => {
                 const reportData = [
                     `${item.dateString} ${item.timeString || ''}`,
-                    item.totalSales.toFixed(2),
-                    item.cashInRegister.toFixed(2),
-                    item.expenses.toFixed(2),
-                    item.onlineSales.toFixed(2),
+                    (Number(item.totalSales) || 0).toFixed(2),
+                    (Number(item.cashInRegister) || 0).toFixed(2),
+                    (Number(item.expenses) || 0).toFixed(2),
+                    (Number(item.onlineSales) || 0).toFixed(2),
                     item.productsCount || 0
                 ];
                 tableRows.push(reportData);
@@ -1289,7 +1310,14 @@
             doc.save(`Tirourda_Rapports_${new Date().toISOString().split('T')[0]}.pdf`);
         }
 
-        // Explicit Global Bindings (This block maps local modular functions to standard window scope variables) [1, 2]
+        // Keyboard navigation bind
+        document.getElementById('access-code').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                attemptLogin();
+            }
+        });
+
+        // Globally exposing modular functions [1, 2]
         window.toggleLanguage = toggleLanguage;
         window.selectRole = selectRole;
         window.cancelLogin = cancelLogin;
