@@ -440,7 +440,7 @@
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 
-        // Your web app's Firebase configuration (Corrected & Integrated) [1, 2]
+        // Your web app's Firebase configuration [1, 2]
         const firebaseConfig = {
             apiKey: "AIzaSyAIMs2Q-4P2LLL2N6tbjBglkcmpapqIhZ8",
             authDomain: "tirourda-magasin.firebaseapp.com",
@@ -613,7 +613,7 @@
         }
 
         // Language toggle
-        window.toggleLanguage = function() {
+        function toggleLanguage() {
             currentLang = currentLang === 'fr' ? 'ar' : 'fr';
             document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
             document.documentElement.lang = currentLang;
@@ -639,24 +639,24 @@
             if (isEditMode) {
                 document.getElementById('seller-form-title').textContent = translations[currentLang].seller_form_title_edit;
             }
-        };
+        }
 
         // Screen selection
-        window.selectRole = function(role) {
+        function selectRole(role) {
             selectedLoginRole = role;
             document.getElementById('login-form-container').classList.remove('hidden');
             document.getElementById('login-title').textContent = (role === 'seller' ? translations[currentLang].seller_portal : translations[currentLang].manager_portal);
             document.getElementById('access-code').value = '';
             document.getElementById('access-code').focus();
-        };
+        }
 
-        window.cancelLogin = function() {
+        function cancelLogin() {
             document.getElementById('login-form-container').classList.add('hidden');
             selectedLoginRole = null;
-        };
+        }
 
         // Login Logic
-        window.attemptLogin = function() {
+        function attemptLogin() {
             const codeInput = document.getElementById('access-code').value.trim();
             
             if (selectedLoginRole === 'seller' && codeInput === '1077') {
@@ -666,7 +666,7 @@
             } else {
                 showToast('err_invalid_code', false);
             }
-        };
+        }
 
         // Success Auth flow
         async function authenticateSuccess(role) {
@@ -686,7 +686,7 @@
         }
 
         // Logout
-        window.logout = function() {
+        function logout() {
             currentUserRole = null;
             selectedLoginRole = null;
             document.getElementById('seller-section').classList.add('hidden');
@@ -697,10 +697,10 @@
             document.getElementById('sales-form').reset();
             document.getElementById('zero-sales-alert').classList.add('hidden');
             cancelEditMode();
-        };
+        }
 
         // Red Banner trigger on Total Sales = 0
-        window.checkZeroSales = function(val) {
+        function checkZeroSales(val) {
             const num = parseFloat(val);
             const alertBanner = document.getElementById('zero-sales-alert');
             if (num === 0 || val === '00' || val === '0') {
@@ -708,10 +708,10 @@
             } else {
                 alertBanner.classList.add('hidden');
             }
-        };
+        }
 
         // Display switcher for Manager Filter inputs
-        window.toggleFilterInputs = function() {
+        function toggleFilterInputs() {
             const filterMode = document.querySelector('input[name="filter-mode"]:checked').value;
             const singleContainer = document.getElementById('single-date-container');
             const startContainer = document.getElementById('start-date-container');
@@ -726,10 +726,10 @@
                 startContainer.classList.remove('hidden');
                 endContainer.classList.remove('hidden');
             }
-        };
+        }
 
-        // Dual-Write Data Storage Handler (LocalStorage + Firestore fallback) [1, 2]
-        window.handleFormSubmit = async function(event) {
+        // Dual-Write LocalStorage-First Handler [1]
+        async function handleFormSubmit(event) {
             event.preventDefault();
 
             const sales = parseFloat(document.getElementById('input-total-sales').value) || 0;
@@ -738,7 +738,6 @@
             const online = parseFloat(document.getElementById('input-online').value) || 0;
             const deposit = parseFloat(document.getElementById('input-deposit').value) || 0;
             
-            // Optional Fields
             const pCount = parseInt(document.getElementById('input-products-count').value) || 0;
             const pNames = document.getElementById('input-products-names').value.trim();
 
@@ -756,23 +755,34 @@
                     timeString: new Date(editingReportTimestamp).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
                 };
 
-                // 1. Immediately update Local Database (Dual-Write) [1, 2]
+                // 1. Immediately update Local Database
                 updateLocalFallback(updatedReport);
 
-                // 2. Async Sync with cloud Firestore [1, 2]
-                try {
-                    if (editingReportId) {
-                        const reportDocRef = doc(db, "daily_reports", editingReportId);
-                        await updateDoc(reportDocRef, updatedReport);
-                    }
-                } catch (error) {
-                    console.warn("Firestore update failed, relying on local state.", error);
+                // 2. Immediately update in-memory array and local UI
+                const index = allReports.findIndex(item => item.timestamp === editingReportTimestamp);
+                if (index !== -1) {
+                    allReports[index] = { ...allReports[index], ...updatedReport };
                 }
+                filteredReports = [...allReports];
+                populateSellerTable();
 
                 showToast('success_updated', true);
                 cancelEditMode();
-                await fetchReportsData();
-                populateSellerTable();
+
+                // 3. Fire-and-forget background update to Firestore [1]
+                if (editingReportId) {
+                    const reportDocRef = doc(db, "daily_reports", editingReportId);
+                    updateDoc(reportDocRef, updatedReport)
+                        .then(() => console.log("Cloud sync updated successfully."))
+                        .catch(err => console.warn("Cloud sync failed (will rely on local data):", err));
+                } else {
+                    addDoc(reportsCollection, updatedReport)
+                        .then(docRef => {
+                            updatedReport.docId = docRef.id;
+                            updateLocalFallback(updatedReport);
+                        })
+                        .catch(err => console.warn(err));
+                }
 
             } else {
                 const newReport = {
@@ -788,23 +798,30 @@
                     timeString: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
                 };
 
-                // 1. Instantly write to Local Database (Dual-Write) [1, 2]
+                // 1. Instantly write to Local Database
                 saveToLocalFallback(newReport);
 
-                // 2. Async Sync to Firestore [1, 2]
-                try {
-                    await addDoc(reportsCollection, newReport);
-                } catch (firebaseError) {
-                    console.warn("Firebase Storage failure, saved locally.", firebaseError);
-                }
+                // 2. Instantly update UI (no async blockage) [1]
+                allReports.unshift(newReport);
+                filteredReports = [...allReports];
+                populateSellerTable();
 
                 showToast('success_saved', true);
                 document.getElementById('sales-form').reset();
                 document.getElementById('zero-sales-alert').classList.add('hidden');
-                await fetchReportsData();
-                populateSellerTable();
+
+                // 3. Background Sync to Cloud Firestore (Async) [1]
+                addDoc(reportsCollection, newReport)
+                    .then((docRef) => {
+                        console.log("Cloud database synchronized.");
+                        newReport.docId = docRef.id;
+                        updateLocalFallback(newReport);
+                    })
+                    .catch((firebaseError) => {
+                        console.warn("Cloud synchronization delayed. Retaining offline data.", firebaseError);
+                    });
             }
-        };
+        }
 
         function saveToLocalFallback(report) {
             let localData = JSON.parse(localStorage.getItem('tirourda_reports') || '[]');
@@ -823,11 +840,11 @@
             localStorage.setItem('tirourda_reports', JSON.stringify(localData));
         }
 
-        // Retrieve reports (Smart Merge Local Storage and Cloud Firestore) [1, 2]
+        // Retrieve reports
         async function fetchReportsData() {
             allReports = [];
             
-            // First load local storage to ensure instant offline visual update [1]
+            // Render local storage first
             const localData = JSON.parse(localStorage.getItem('tirourda_reports') || '[]');
             allReports = [...localData];
 
@@ -839,7 +856,6 @@
                     const fbData = doc.data();
                     fbData.docId = doc.id;
                     
-                    // Deduplicate and merge Firestore data over local fallback [1]
                     const existingIndex = allReports.findIndex(item => item.timestamp === fbData.timestamp);
                     if (existingIndex !== -1) {
                         allReports[existingIndex] = { ...allReports[existingIndex], ...fbData };
@@ -848,7 +864,7 @@
                     }
                 });
             } catch (firestoreError) {
-                console.warn("Firestore collection fetch failure, displaying local dataset only.", firestoreError);
+                console.warn("Firestore access restricted or offline.", firestoreError);
             }
 
             // Standard order by timestamp descending
@@ -881,7 +897,6 @@
                 
                 const formattedDate = `${item.dateString} ${item.timeString || ''}`;
                 
-                // Render products information nicely if they exist
                 const prodDetails = (item.productsCount && item.productsCount > 0)
                     ? `<div class="text-[10px] text-slate-400 mt-1">📦 ${item.productsCount} pcs: ${item.productsNames || ''}</div>`
                     : '';
@@ -905,14 +920,14 @@
                 tbody.appendChild(tr);
             });
 
-            // Update mini dashboard statistics for Seller [1, 2]
+            // Update statistics
             document.getElementById('seller-stat-sales').textContent = sellerSales.toFixed(2);
             document.getElementById('seller-stat-expenses').textContent = sellerExpenses.toFixed(2);
             document.getElementById('seller-stat-cash').textContent = sellerCash.toFixed(2);
         }
 
         // Enter Edit Mode [1, 2]
-        window.startEditMode = function(docId, timestamp) {
+        function startEditMode(docId, timestamp) {
             const reportToEdit = allReports.find(item => item.timestamp === timestamp);
             if (!reportToEdit) return;
 
@@ -941,9 +956,9 @@
 
             checkZeroSales(reportToEdit.totalSales);
             document.getElementById('seller-section').scrollIntoView({ behavior: 'smooth' });
-        };
+        }
 
-        window.cancelEditMode = function() {
+        function cancelEditMode() {
             isEditMode = false;
             editingReportId = null;
             editingReportTimestamp = null;
@@ -958,7 +973,7 @@
             document.getElementById('btn-cancel-edit').classList.add('hidden');
             document.getElementById('sales-form').reset();
             document.getElementById('zero-sales-alert').classList.add('hidden');
-        };
+        }
 
         // Manager Intelligent Alerts System
         function runManagerAlertEngine() {
@@ -969,14 +984,12 @@
             let alerts = [];
 
             // 1. Calculate Consecutive No Sales (0 sales)
-            // Group total sales by date
             const dailySums = {};
             allReports.forEach(item => {
                 if (!dailySums[item.dateString]) dailySums[item.dateString] = 0;
                 dailySums[item.dateString] += item.totalSales;
             });
 
-            // Sort dates descending
             const sortedDates = Object.keys(dailySums).sort((a,b) => b.localeCompare(a));
             
             let consecutiveZeros = 0;
@@ -998,7 +1011,7 @@
                 alerts.push({ type: 'danger', text: currentLang === 'ar' ? textAr : textFr });
             }
 
-            // 2. High Expenses Alert (Expenses > 50% of Sales in any entry)
+            // 2. High Expenses Alert
             const highExpensesEntry = filteredReports.find(item => item.totalSales > 0 && (item.expenses > (item.totalSales * 0.5)));
             if (highExpensesEntry) {
                 const textFr = `Attention: Charges élevées détectées le ${highExpensesEntry.dateString} (>50% des ventes)`;
@@ -1006,7 +1019,7 @@
                 alerts.push({ type: 'warning', text: currentLang === 'ar' ? textAr : textFr });
             }
 
-            // 3. Online Dominance Success Alert (Online sales exceeding cash sales)
+            // 3. Online Dominance Success Alert
             const onlineBoomEntry = filteredReports.find(item => item.onlineSales > item.cashInRegister && item.onlineSales > 0);
             if (onlineBoomEntry) {
                 const textFr = `Succès: Les ventes en ligne ont dépassé le cash physique le ${onlineBoomEntry.dateString} !`;
@@ -1022,7 +1035,6 @@
                 alerts.push({ type: 'info', text: currentLang === 'ar' ? textAr : textFr });
             }
 
-            // Display alerts if any
             if (alerts.length > 0) {
                 container.classList.remove('hidden');
                 alerts.forEach(alert => {
@@ -1062,7 +1074,6 @@
                 
                 const formattedDate = `${item.dateString} ${item.timeString || ''}`;
 
-                // Display products sold under total sales
                 const prodDetails = (item.productsCount && item.productsCount > 0)
                     ? `<div class="text-[10px] text-slate-400 mt-1">📦 ${item.productsCount} pcs: ${item.productsNames || ''}</div>`
                     : '';
@@ -1099,7 +1110,7 @@
         }
 
         // Filter / Period & Single Day Comparison Logic
-        window.applyFilters = function() {
+        function applyFilters() {
             const filterMode = document.querySelector('input[name="filter-mode"]:checked').value;
 
             if (filterMode === 'single') {
@@ -1121,15 +1132,15 @@
             }
 
             updateDashboardVisuals();
-        };
+        }
 
-        window.resetFilters = function() {
+        function resetFilters() {
             document.getElementById('filter-single-date').value = '';
             document.getElementById('filter-start').value = '';
             document.getElementById('filter-end').value = '';
             filteredReports = [...allReports];
             updateDashboardVisuals();
-        };
+        }
 
         // Dynamic Chart.js Rendering
         function renderProgressionChart() {
@@ -1222,7 +1233,7 @@
         }
 
         // Document Exporting Logic
-        window.exportToExcel = function() {
+        function exportToExcel() {
             const currentData = currentUserRole === 'seller' ? allReports : filteredReports;
 
             const dataToExport = currentData.map(item => ({
@@ -1240,9 +1251,9 @@
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Reports");
             XLSX.writeFile(workbook, `Tirourda_Reports_${new Date().toISOString().split('T')[0]}.xlsx`);
-        };
+        }
 
-        window.exportToPDF = function() {
+        function exportToPDF() {
             const currentData = currentUserRole === 'seller' ? allReports : filteredReports;
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -1276,16 +1287,9 @@
             });
 
             doc.save(`Tirourda_Rapports_${new Date().toISOString().split('T')[0]}.pdf`);
-        };
+        }
 
-        // Keyboard navigation bind
-        document.getElementById('access-code').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                attemptLogin();
-            }
-        });
-
-        // Globally exposing modular functions [1, 2]
+        // Explicit Global Bindings (This block maps local modular functions to standard window scope variables) [1, 2]
         window.toggleLanguage = toggleLanguage;
         window.selectRole = selectRole;
         window.cancelLogin = cancelLogin;
