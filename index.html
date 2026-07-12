@@ -185,7 +185,7 @@
 
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2" data-i18n="field_online">Ventes en ligne</label>
+                                <label class="block text-sm font-medium text-slate-300 mb-2" data-i18n="field_online">Ventes en online</label>
                                 <input type="number" step="0.01" required id="input-online" class="glass-input w-full px-4 py-3 rounded-xl text-sm" placeholder="0.00">
                             </div>
                             <div>
@@ -260,7 +260,9 @@
                                     </tr>
                                 </thead>
                                 <tbody id="seller-reports-table-body" class="divide-y divide-slate-800/55">
-                                    <!-- Populated Dynamically -->
+                                    <tr>
+                                        <td colspan="4" class="text-center py-8 text-slate-400" data-i18n="loading_text">Chargement depuis Firebase...</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -419,7 +421,9 @@
                             </tr>
                         </thead>
                         <tbody id="reports-table-body" class="divide-y divide-slate-800/55">
-                            <!-- Populated Dynamically -->
+                            <tr>
+                                <td colspan="6" class="text-center py-8 text-slate-400" data-i18n="loading_text">Chargement depuis Firebase...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -440,7 +444,7 @@
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 
-        // Firebase Configuration [1, 2]
+        // Your web app's Firebase configuration [1, 2]
         const firebaseConfig = {
             apiKey: "AIzaSyAIMs2Q-4P2LLL2N6tbjBglkcmpapqIhZ8",
             authDomain: "tirourda-magasin.firebaseapp.com",
@@ -509,12 +513,14 @@
                 col_actions: "Actions",
                 logout: "Déconnexion",
                 err_invalid_code: "Code d'accès incorrect !",
-                success_saved: "Données enregistrées localement et synchronisées !",
-                success_updated: "Rapport mis à jour avec succès !",
-                error_save_failed: "Une erreur est survenue lors de l'enregistrement.",
+                success_saved: "Rapport enregistré sur Firebase !",
+                success_updated: "Rapport mis à jour sur Firebase !",
+                error_save_failed: "Échec de l'enregistrement sur Firebase !",
+                error_fetch_failed: "Erreur lors du chargement depuis Firebase.",
                 seller_recent_entries: "Mes Saisies Récentes",
                 action_edit: "Modifier",
-                manager_alerts_title: "Alertes et Notifications du Système"
+                manager_alerts_title: "Alertes et Notifications du Système",
+                loading_text: "Chargement depuis Firebase..."
             },
             ar: {
                 app_title: "متجر تيروردا",
@@ -566,12 +572,14 @@
                 col_actions: "العمليات",
                 logout: "تسجيل الخروج",
                 err_invalid_code: "رمز المرور غير صحيح!",
-                success_saved: "تم حفظ وتحديث البيانات بنجاح!",
-                success_updated: "تم تحديث التقرير بنجاح!",
-                error_save_failed: "حدث خطأ غير متوقع أثناء عملية الحفظ.",
+                success_saved: "تم حفظ التقرير سحابياً بنجاح!",
+                success_updated: "تم تحديث التقرير سحابياً بنجاح!",
+                error_save_failed: "فشل الحفظ على Firebase!",
+                error_fetch_failed: "فشل تحميل البيانات من Firebase.",
                 seller_recent_entries: "مدخلاتي الأخيرة",
                 action_edit: "تعديل",
-                manager_alerts_title: "لوحة تنبيهات النظام الذكية"
+                manager_alerts_title: "لوحة تنبيهات النظام الذكية",
+                loading_text: "جاري التحميل من Firebase..."
             }
         };
 
@@ -678,7 +686,6 @@
                 document.getElementById('seller-section').classList.remove('hidden');
                 cancelEditMode();
                 await fetchReportsData(); 
-                populateSellerTable();
             } else if (role === 'manager') {
                 document.getElementById('manager-section').classList.remove('hidden');
                 await fetchReportsData();
@@ -728,9 +735,15 @@
             }
         }
 
-        // Dual-Write LocalStorage-First Handler [1]
+        // Direct Firebase-Only Storage Handler [1]
         async function handleFormSubmit(event) {
             event.preventDefault();
+
+            // Disable button during active network saving [1]
+            const btnSubmit = document.getElementById('btn-submit-report');
+            const originalBtnText = btnSubmit.querySelector('span').textContent;
+            btnSubmit.disabled = true;
+            btnSubmit.querySelector('span').textContent = currentLang === 'ar' ? 'جاري الحفظ سحابياً...' : 'Enregistrement saphir...';
 
             const sales = parseFloat(document.getElementById('input-total-sales').value) || 0;
             const cash = parseFloat(document.getElementById('input-cash').value) || 0;
@@ -741,133 +754,90 @@
             const pCount = parseInt(document.getElementById('input-products-count').value) || 0;
             const pNames = document.getElementById('input-products-names').value.trim();
 
-            if (isEditMode) {
-                const updatedReport = {
-                    totalSales: sales,
-                    cashInRegister: cash,
-                    expenses: expenses,
-                    onlineSales: online,
-                    bankDeposit: deposit,
-                    productsCount: pCount,
-                    productsNames: pNames,
-                    timestamp: editingReportTimestamp,
-                    dateString: new Date(editingReportTimestamp).toISOString().split('T')[0],
-                    timeString: new Date(editingReportTimestamp).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
-                };
+            try {
+                if (isEditMode) {
+                    const updatedReport = {
+                        totalSales: sales,
+                        cashInRegister: cash,
+                        expenses: expenses,
+                        onlineSales: online,
+                        bankDeposit: deposit,
+                        productsCount: pCount,
+                        productsNames: pNames,
+                        timestamp: editingReportTimestamp,
+                        dateString: new Date(editingReportTimestamp).toISOString().split('T')[0],
+                        timeString: new Date(editingReportTimestamp).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
+                    };
 
-                // 1. Immediately update Local Database
-                updateLocalFallback(updatedReport);
+                    // Send directly to Firebase [1]
+                    if (editingReportId) {
+                        const reportDocRef = doc(db, "daily_reports", editingReportId);
+                        await updateDoc(reportDocRef, updatedReport);
+                        showToast('success_updated', true);
+                    }
+                    cancelEditMode();
 
-                // 2. Immediately update in-memory array and local UI
-                const index = allReports.findIndex(item => item.timestamp === editingReportTimestamp);
-                if (index !== -1) {
-                    allReports[index] = { ...allReports[index], ...updatedReport };
-                }
-                filteredReports = [...allReports];
-                populateSellerTable();
-
-                showToast('success_updated', true);
-                cancelEditMode();
-
-                // 3. Fire-and-forget background update to Firestore [1]
-                if (editingReportId) {
-                    const reportDocRef = doc(db, "daily_reports", editingReportId);
-                    updateDoc(reportDocRef, updatedReport)
-                        .then(() => console.log("Cloud sync updated successfully."))
-                        .catch(err => console.warn("Cloud sync failed (will rely on local data):", err));
                 } else {
-                    addDoc(reportsCollection, updatedReport)
-                        .then(docRef => {
-                            updatedReport.docId = docRef.id;
-                            updateLocalFallback(updatedReport);
-                        })
-                        .catch(err => console.warn(err));
+                    const newReport = {
+                        totalSales: sales,
+                        cashInRegister: cash,
+                        expenses: expenses,
+                        onlineSales: online,
+                        bankDeposit: deposit,
+                        productsCount: pCount,
+                        productsNames: pNames,
+                        timestamp: Date.now(),
+                        dateString: new Date().toISOString().split('T')[0],
+                        timeString: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
+                    };
+
+                    // Send directly to Firebase [1]
+                    await addDoc(reportsCollection, newReport);
+                    showToast('success_saved', true);
+                    document.getElementById('sales-form').reset();
+                    document.getElementById('zero-sales-alert').classList.add('hidden');
                 }
 
-            } else {
-                const newReport = {
-                    totalSales: sales,
-                    cashInRegister: cash,
-                    expenses: expenses,
-                    onlineSales: online,
-                    bankDeposit: deposit,
-                    productsCount: pCount,
-                    productsNames: pNames,
-                    timestamp: Date.now(),
-                    dateString: new Date().toISOString().split('T')[0],
-                    timeString: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
-                };
+                // Refresh dataset directly from Firebase [1]
+                await fetchReportsData();
 
-                // 1. Instantly write to Local Database
-                saveToLocalFallback(newReport);
-
-                // 2. Instantly update UI (no async blockage) [1]
-                allReports.unshift(newReport);
-                filteredReports = [...allReports];
-                populateSellerTable();
-
-                showToast('success_saved', true);
-                document.getElementById('sales-form').reset();
-                document.getElementById('zero-sales-alert').classList.add('hidden');
-
-                // 3. Background Sync to Cloud Firestore (Async) [1]
-                addDoc(reportsCollection, newReport)
-                    .then((docRef) => {
-                        console.log("Cloud database synchronized.");
-                        newReport.docId = docRef.id;
-                        updateLocalFallback(newReport);
-                    })
-                    .catch((firebaseError) => {
-                        console.warn("Cloud synchronization delayed. Retaining offline data.", firebaseError);
-                    });
+            } catch (firebaseError) {
+                console.error("Firebase Storage failure", firebaseError);
+                showToast('error_save_failed', false);
+            } finally {
+                // Restore button state
+                btnSubmit.disabled = false;
+                btnSubmit.querySelector('span').textContent = originalBtnText;
             }
         }
 
-        function saveToLocalFallback(report) {
-            let localData = JSON.parse(localStorage.getItem('tirourda_reports') || '[]');
-            localData.push(report);
-            localStorage.setItem('tirourda_reports', JSON.stringify(localData));
-        }
-
-        function updateLocalFallback(updatedReport) {
-            let localData = JSON.parse(localStorage.getItem('tirourda_reports') || '[]');
-            const index = localData.findIndex(item => item.timestamp === updatedReport.timestamp);
-            if (index !== -1) {
-                localData[index] = updatedReport;
-            } else {
-                localData.push(updatedReport);
-            }
-            localStorage.setItem('tirourda_reports', JSON.stringify(localData));
-        }
-
-        // Retrieve reports (Synchronized)
+        // Retrieve reports exclusively from Firebase [1]
         async function fetchReportsData() {
             allReports = [];
             
-            // Render local storage first
-            const localData = JSON.parse(localStorage.getItem('tirourda_reports') || '[]');
-            allReports = [...localData];
+            // Show loading placeholder inside tables
+            const sellerTbody = document.getElementById('seller-reports-table-body');
+            const managerTbody = document.getElementById('reports-table-body');
+            const loadingHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 font-semibold">${translations[currentLang].loading_text}</td></tr>`;
+            if (sellerTbody) sellerTbody.innerHTML = loadingHTML;
+            if (managerTbody) managerTbody.innerHTML = loadingHTML;
 
             try {
+                // Read directly from Firestore [1]
                 const q = query(reportsCollection, orderBy('timestamp', 'desc'));
                 const querySnapshot = await getDocs(q);
                 
                 querySnapshot.forEach((doc) => {
                     const fbData = doc.data();
                     fbData.docId = doc.id;
-                    
-                    const existingIndex = allReports.findIndex(item => item.timestamp === fbData.timestamp);
-                    if (existingIndex !== -1) {
-                        allReports[existingIndex] = { ...allReports[existingIndex], ...fbData };
-                    } else {
-                        allReports.push(fbData);
-                    }
+                    allReports.push(fbData);
                 });
             } catch (firestoreError) {
-                console.warn("Firestore access restricted or offline.", firestoreError);
+                console.error("Firestore loading failure", firestoreError);
+                showToast("error_fetch_failed", false);
             }
 
-            // Standard order by timestamp descending
+            // Order by timestamp descending
             allReports.sort((a, b) => b.timestamp - a.timestamp);
             filteredReports = [...allReports];
 
@@ -878,7 +848,7 @@
             }
         }
 
-        // Populate Table for Sellers with Safety Sanitization [1]
+        // Populate Table for Sellers [1, 2]
         function populateSellerTable() {
             const tbody = document.getElementById('seller-reports-table-body');
             tbody.innerHTML = '';
